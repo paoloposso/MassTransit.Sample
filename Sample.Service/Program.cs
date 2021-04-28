@@ -10,6 +10,8 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Sample.Components.Consumers;
+using Sample.Components.StateMachines;
+using System.Configuration;  
 
 namespace Sample.Service
 {
@@ -21,24 +23,25 @@ namespace Sample.Service
 
             var builder = new HostBuilder()
                 .ConfigureAppConfiguration((hostingContext, config) => {
-                    config.AddJsonFile("appSettings.json", true);
+                    config.AddJsonFile("appsettings.json", false).Build();
                     config.AddEnvironmentVariables();
 
                     if (args != null) {
                         config.AddCommandLine(args);
                     }
                 })
-                .ConfigureServices((hostContext, services) => { 
+                .ConfigureServices((hostingContext, services) => { 
                     services.TryAddSingleton(KebabCaseEndpointNameFormatter.Instance);
                     
                     services.AddMassTransit(cfg => {
                         cfg.AddConsumersFromNamespaceContaining<SubmitOrderConsumer>();
-                        
-                        cfg.AddBus(provider => {
-                            return Bus.Factory.CreateUsingRabbitMq(cfg => {
-                                cfg.ConfigureEndpoints(provider);
+
+                        cfg.AddSagaStateMachine<OrderStateMachine, OrderState>()
+                            .RedisRepository(s => {
+                                s.DatabaseConfiguration("localhost");
                             });
-                        });
+
+                        cfg.AddBus(ConfigureBus);
                     });
 
                     services.AddHostedService<MassTransitConsoleHostedService>();
@@ -51,6 +54,14 @@ namespace Sample.Service
                 await builder.UseWindowsService().Build().RunAsync();
             else
                 await builder.RunConsoleAsync();
+        }
+
+        private static IBusControl ConfigureBus(IBusRegistrationContext provider)
+        {
+            return Bus.Factory.CreateUsingRabbitMq(cfg =>
+            {
+                cfg.ConfigureEndpoints(provider);
+            });
         }
     }
 }

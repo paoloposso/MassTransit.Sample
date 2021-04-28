@@ -2,6 +2,7 @@ using Sample.Contracts;
 using MassTransit;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using System;
 
 namespace Sample.Components.Consumers
 {
@@ -13,28 +14,43 @@ namespace Sample.Components.Consumers
         {
             _logger = logger;
         }
-
+        
         public async Task Consume(ConsumeContext<SubmitOrder> context)
         {
             _logger.Log(LogLevel.Debug, $"SubmitOrderConsumer {context.Message.CustomerNumber}");
 
             if (context.Message.CustomerNumber.Contains("TEST"))
             {
-                await context.RespondAsync<OrderSubmissionRejected>(new { 
-                    InVar.Timestamp,
-                    context.Message.OrderId,
-                    context.Message.CustomerNumber,
-                    Reason = $"Test customers cannot submit orders: {context.Message.CustomerNumber}"
-                });
+                if (context.RequestId != null)
+                {
+                    await context.RespondAsync<OrderSubmissionRejected>((
+                        InVar.Timestamp,
+                        context.Message.OrderId,
+                        context.Message.CustomerNumber,
+                        Reason: $"Test customers cannot submit orders: {context.Message.CustomerNumber}"
+                    ));
+                }
 
                 return;
             }
 
-            await context.RespondAsync<OrderSubmissionAccepted>(new OrderSubmissionAccepted { 
-                Timestamp = InVar.Timestamp,
-                OrderId = context.Message.OrderId,
-                CustomerNumber = context.Message.CustomerNumber,
-            });
+            await context.Publish<OrderSubmitted>(
+                new
+                {
+                    context.Message.OrderId,
+                    context.Message.CustomerNumber,
+                    context.Message.Timestamp
+                }); 
+
+            if (context.RequestId != null)
+            {
+                await context.RespondAsync<OrderSubmissionAccepted>(new
+                {
+                    Timestamp = InVar.Timestamp,
+                    OrderId = context.Message.OrderId,
+                    CustomerNumber = context.Message.CustomerNumber,
+                });
+            }
         }
     }
 }

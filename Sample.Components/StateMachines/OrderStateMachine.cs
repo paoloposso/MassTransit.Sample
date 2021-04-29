@@ -19,17 +19,38 @@ namespace Sample.Components.StateMachines
 
             InstanceState(x => x.CurrentState);
 
-            Initially(When(OrderSubmitted).TransitionTo(Submitted));
+            Initially(
+                When(OrderSubmitted)
+                .Then(context =>
+                {
+                    context.Instance.CustomerNumber = context.Data.CustomerNumber;
+                    context.Instance.Updated = DateTime.UtcNow;
+                    context.Instance.SubmitDate = DateTime.UtcNow;
+                })
+                .TransitionTo(Submitted));
+
+            During(Submitted, Ignore(OrderSubmitted));
+
+            DuringAny(When(OrderSubmitted)
+                .Then(context =>
+                {
+                    context.Instance.CustomerNumber = context.Data.CustomerNumber;
+                    context.Instance.SubmitDate = context.Data.Timestamp;
+                })
+            );
         }
 
         public State Submitted { get; private set; }
         public Event<OrderSubmitted> OrderSubmitted { get; private set; }
     }
 
-    public class OrderState : SagaStateMachineInstance, ISagaVersion  
+    public class OrderState : SagaStateMachineInstance, ISagaVersion
     {
         public Guid CorrelationId { get; set; }
         public string CurrentState { get; set; }
+        public string CustomerNumber { get; set; }
         public int Version { get; set; }
+        public DateTime Updated { get; set; }
+        public DateTime SubmitDate { get; set; }
     }
 }

@@ -8,19 +8,4 @@ namespace Sample.Contracts
          public DateTime Timestamp { get; set; }
          public string CustomerNumber { get; set; }
     }
-
-    public class OrderSubmissionAccepted
-    {
-        public Guid OrderId { get; set; }
-        public DateTime Timestamp { get; set; }
-        public string CustomerNumber { get; set; }
-    }
-
-    public class OrderSubmissionRejected
-    {
-        public Guid OrderId { get; set; }
-        public DateTime Timestamp { get; set; }
-        public string CustomerNumber { get; set; }
-        string Reason { get; set; }
-    }
 }

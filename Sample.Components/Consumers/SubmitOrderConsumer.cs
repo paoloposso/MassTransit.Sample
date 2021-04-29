@@ -14,7 +14,7 @@ namespace Sample.Components.Consumers
         {
             _logger = logger;
         }
-        
+
         public async Task Consume(ConsumeContext<SubmitOrder> context)
         {
             _logger.Log(LogLevel.Debug, $"SubmitOrderConsumer {context.Message.CustomerNumber}");
@@ -30,7 +30,6 @@ namespace Sample.Components.Consumers
                         Reason: $"Test customers cannot submit orders: {context.Message.CustomerNumber}"
                     ));
                 }
-
                 return;
             }
 
@@ -40,7 +39,7 @@ namespace Sample.Components.Consumers
                     context.Message.OrderId,
                     context.Message.CustomerNumber,
                     context.Message.Timestamp
-                }); 
+                });
 
             if (context.RequestId != null)
             {

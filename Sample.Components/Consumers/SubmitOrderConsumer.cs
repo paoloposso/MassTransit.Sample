@@ -19,7 +19,7 @@ namespace Sample.Components.Consumers
         {
             _logger.Log(LogLevel.Debug, $"SubmitOrderConsumer {context.Message.CustomerNumber}");
 
-            if (context.Message.CustomerNumber.Contains("TEST"))
+            if (context.Message.CustomerNumber.ToUpper().Contains("TEST"))
             {
                 if (context.RequestId != null)
                 {

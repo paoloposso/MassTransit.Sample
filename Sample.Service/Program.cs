@@ -33,18 +33,28 @@ namespace Sample.Service
                 .ConfigureServices((hostingContext, services) => { 
                     services.TryAddSingleton(KebabCaseEndpointNameFormatter.Instance);
                     
-                    services.AddMassTransit(cfg => {
-                        cfg.AddConsumersFromNamespaceContaining<SubmitOrderConsumer>();
+                    services.AddMassTransit(x => {
+                        x.AddConsumersFromNamespaceContaining<SubmitOrderConsumer>();
 
-                        cfg.AddSagaStateMachine<OrderStateMachine, OrderState>()
+                        x.AddSagaStateMachine<OrderStateMachine, OrderState>()
                             .RedisRepository(s => {
                                 s.DatabaseConfiguration("localhost");
                             });
 
-                        cfg.AddBus(ConfigureBus);
+                        x.UsingRabbitMq((context, cfg) =>
+                        {
+                            cfg.Host("localhost", "/", h =>
+                            {
+                                h.Username("guest");
+                                h.Password("guest");
+                            });
+
+                            cfg.ConfigureEndpoints(context);
+                        });
                     });
 
                     services.AddHostedService<MassTransitConsoleHostedService>();
+
                 }).ConfigureLogging((hostingContext, logging) => {
                     logging.AddConfiguration(hostingContext.Configuration.GetSection("Logging"));
                     logging.AddConsole();
@@ -54,14 +64,6 @@ namespace Sample.Service
                 await builder.UseWindowsService().Build().RunAsync();
             else
                 await builder.RunConsoleAsync();
-        }
-
-        private static IBusControl ConfigureBus(IBusRegistrationContext provider)
-        {
-            return Bus.Factory.CreateUsingRabbitMq(cfg =>
-            {
-                cfg.ConfigureEndpoints(provider);
-            });
         }
     }
 }

@@ -1,14 +1,14 @@
+using MassTransit;
+using MassTransit.Definition;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi.Models;
-using MassTransit;
-using Sample.Contracts;
 using Sample.Components.Consumers;
-using Microsoft.Extensions.DependencyInjection.Extensions;
-using MassTransit.Definition;
+using Sample.Contracts;
 using System;
 
 namespace Sample.Api
@@ -24,20 +24,25 @@ namespace Sample.Api
 
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
-        {            
+        {
             services.TryAddSingleton(KebabCaseEndpointNameFormatter.Instance);
-            
-            services.AddMassTransit(cfg => {
-                //TODO: add configurations
-                cfg.AddBus(provider => Bus.Factory.CreateUsingRabbitMq());
-                cfg.AddRequestClient<SubmitOrder>(
-                    new Uri($"exchange:{KebabCaseEndpointNameFormatter.Instance.Consumer<SubmitOrderConsumer>()}"));
+
+            services.AddMassTransit(cfg =>
+            {
+                cfg.UsingRabbitMq((context, cfg) =>
+                {
+                    cfg.ConfigureEndpoints(context);
+                });
+                //cfg.AddRequestClient<SubmitOrder>(new Uri($"exchange:{KebabCaseEndpointNameFormatter.Instance.Consumer<SubmitOrderConsumer>()}"));
+                cfg.AddRequestClient<SubmitOrder>();
+                cfg.AddRequestClient<CheckOrder>();
             });
 
             services.AddMassTransitHostedService();
+            services.AddHealthChecks();
 
             services.AddControllers();
-            
+
             services.AddSwaggerGen(c =>
             {
                 c.SwaggerDoc("v1", new OpenApiInfo { Title = "API", Version = "v1" });
